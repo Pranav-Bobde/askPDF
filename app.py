@@ -7,15 +7,27 @@ from langchain import HuggingFaceHub
 from PyPDF2 import PdfReader
 
 
-def get_answer(name, texts, question):
+def gen_embedddings(texts):
+    progress_text = "Indexing documents..."
+    progress_bar = st.progress(0, progress_text)
+    embeddings = HuggingFaceEmbeddings()
+    for i in range(len(texts)):
+        FAISS.from_texts(texts[i:i+1], embeddings)
+        progress_value = (i+1)/len(texts)
+        if progress_value > 1.0:
+            progress_value = 1.0
+        progress_bar.progress(progress_value, progress_text)
+    progress_bar.empty()
+    st.session_state['vector_store'] = FAISS.from_texts(texts, embeddings)
+
+
+def gen_response(name, question):
     llm = HuggingFaceHub(
         repo_id="google/flan-t5-large",
         model_kwargs={"temperature": 0.1, "max_length": 64},
     )  # type: ignore
 
-    embeddings = HuggingFaceEmbeddings()
-    db = FAISS.from_texts(texts, embeddings)
-    context = db.similarity_search(question)
+    context = st.session_state['vector_store'].similarity_search(question)
 
     template = """
     You are the pdf named "{name}". Your task is to extract information and provide 
@@ -43,19 +55,31 @@ def get_answer(name, texts, question):
 
 
 def getTexts(file):
+    progressText = 'Processing pdf...'
+    progressBar = st.progress(0, progressText)
+    progressBar.empty()
+
     text = ""
     pdf_reader = PdfReader(file)
+    num_pages = len(pdf_reader.pages)
+    progressBar.progress(0.1)
 
-    for page in pdf_reader.pages:
+    for i, page in enumerate(pdf_reader.pages):
         text += page.extract_text()
+        progressBar.progress(0.1 + 0.9 * (i+1) / num_pages, progressText)
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500, chunk_overlap=100, length_function=len
     )
 
-    return splitter.split_text(text)
+    texts = splitter.split_text(text)
+    progressBar.progress(1.0)
+    progressBar.empty()
+    return texts
 
-st.set_page_config(page_title="🤗💬 PDF Chat App", initial_sidebar_state="expanded")
+
+st.set_page_config(page_title="🤗💬 PDF Chat App",
+                   initial_sidebar_state="expanded")
 
 
 with st.sidebar:
@@ -81,7 +105,12 @@ with st.sidebar:
             st.success("API token saved!", icon="✅")
 
     def clear_chat_history():
-        st.session_state["messages"] = [{"role": "assistant", "content": "How may I assist you today?"}]
+        st.session_state["messages"] = [
+            {
+                "role": "assistant",
+                "content": "How may I assist you today?"
+            }
+        ]
     st.button('Clear Chat History', on_click=clear_chat_history)
 
     st.markdown(
@@ -93,28 +122,32 @@ with st.sidebar:
 
 pdf = st.file_uploader("Upload a pdf file", type="pdf")
 
-if pdf:
-    texts = getTexts(pdf)
+if not pdf:
+    st.warning("Please upload a pdf file.", icon="⚠️")
+else:
+    if not st.session_state.get('vector_store'):
+        texts = getTexts(pdf)
+        gen_embedddings(texts)  # generate embeddings for texts
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = [
-        {"role": "assistant", "content": "How can I help you?"}]
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [
+            {"role": "assistant", "content": "How can I help you?"}]
 
-for msg in st.session_state["messages"]:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
+    for msg in st.session_state["messages"]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
-if prompt := st.chat_input(disabled=not (token and pdf)):
-    if prompt.strip() == "clear":
-        st.session_state["messages"] = []
-        st.chat_message("assistant").write("Chat cleared!")
+    if prompt := st.chat_input(disabled=not (token and pdf)):
+        if prompt.strip() == "clear":
+            st.session_state["messages"] = []
+            st.chat_message("assistant").write("Chat cleared!")
 
-    st.session_state["messages"].append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
-    if st.session_state["messages"][-1]["role"] != "assistant":
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = get_answer(pdf.name[:-4], texts, prompt)
-                st.session_state["messages"].append(
-                    {"role": "assistant", "content": response})
-                st.write(response)
+        st.session_state["messages"].append({"role": "user", "content": prompt})
+        st.chat_message("user").write(prompt)
+        if st.session_state["messages"][-1]["role"] != "assistant":
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = gen_response(pdf.name[:-4], prompt)
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": response})
+                    st.write(response)
