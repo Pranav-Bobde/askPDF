@@ -25,6 +25,7 @@ def gen_response(name, question):
     llm = HuggingFaceHub(
         repo_id="google/flan-t5-large",
         model_kwargs={"temperature": 0.1, "max_length": 150},
+        huggingfacehub_api_token=token
     )
 
     context = ""
