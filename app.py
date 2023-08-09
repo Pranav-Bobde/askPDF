@@ -27,21 +27,14 @@ def gen_response(name, question):
         model_kwargs={"temperature": 0.1, "max_length": 64},
     )  # type: ignore
 
-    context = st.session_state['vector_store'].similarity_search(question)
+    context  = ""
+    for doc in st.session_state['vector_store'].similarity_search(question):
+        context += doc.page_content + "\n"
 
     template = """
-    You are the pdf named "{name}". Your task is to extract information and provide 
-    accurate answers from the PDF documents uploaded by users. You will be presented 
-    with context and question prompts related to the documents. Your goal is to 
-    understand the context, extract relevant information, and generate correct 
-    and informative responses. Remember to consider the context and provide 
-    answers that are coherent, relevant, and knowledgeable.
-    Following are the context and question prompts:
-
+    Name of the file: {name}
     Context: {context}
-
     Question: `{question}`
-
     """
 
     prompt = PromptTemplate(
@@ -142,7 +135,8 @@ else:
             st.session_state["messages"] = []
             st.chat_message("assistant").write("Chat cleared!")
 
-        st.session_state["messages"].append({"role": "user", "content": prompt})
+        st.session_state["messages"].append(
+            {"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
         if st.session_state["messages"][-1]["role"] != "assistant":
             with st.chat_message("assistant"):
