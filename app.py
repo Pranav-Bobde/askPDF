@@ -24,17 +24,19 @@ def gen_embedddings(texts):
 def gen_response(name, question):
     llm = HuggingFaceHub(
         repo_id="google/flan-t5-large",
-        model_kwargs={"temperature": 0.1, "max_length": 64},
-    )  # type: ignore
+        model_kwargs={"temperature": 0.1, "max_length": 150},
+    )
 
-    context  = ""
+    context = ""
     for doc in st.session_state['vector_store'].similarity_search(question):
         context += doc.page_content + "\n"
 
     template = """
     Name of the file: {name}
     Context: {context}
-    Question: `{question}`
+    Question: {question}
+
+    Only after understanding the question properly, answer the question based on the context above with high scrutinity.
     """
 
     prompt = PromptTemplate(
