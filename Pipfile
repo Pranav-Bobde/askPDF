@@ -5,11 +5,12 @@ name = "pypi"
 
 [packages]
 langchain = "*"
-pypdf2 = "*"
 streamlit = "*"
 huggingface-hub = "*"
 sentence-transformers = "*"
 faiss-cpu = "*"
+"pdfminer.six" = "*"
+spacy = {version = "*", extras = ["apple"]}
 
 [requires]
 python_version = "3.9"

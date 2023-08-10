@@ -5,6 +5,29 @@ from langchain import PromptTemplate, LLMChain
 from langchain.vectorstores import FAISS
 from langchain import HuggingFaceHub
 from PyPDF2 import PdfReader
+from pdfminer.high_level import extract_text
+import spacy
+import re
+
+# Load the SpaCy English language model
+nlp = spacy.load("en_core_web_sm")
+
+def preprocess_text(text):
+    # Remove special characters like '•'
+    text = text.replace('•', '')
+    
+    # Remove links
+    text = re.sub(r'http\S+', '', text)
+    
+    # Remove non-alphanumeric characters
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    
+    # Tokenize the text using SpaCy
+    doc = nlp(text)
+    cleaned_text = ' '.join([token.text for token in doc])
+    
+    return cleaned_text
+
 
 
 def gen_embedddings(texts):
@@ -51,27 +74,12 @@ def gen_response(name, question):
 
 
 def getTexts(file):
-    progressText = 'Processing pdf...'
-    progressBar = st.progress(0, progressText)
-    progressBar.empty()
-
-    text = ""
-    pdf_reader = PdfReader(file)
-    num_pages = len(pdf_reader.pages)
-    progressBar.progress(0.1)
-
-    for i, page in enumerate(pdf_reader.pages):
-        text += page.extract_text()
-        progressBar.progress(0.1 + 0.9 * (i+1) / num_pages, progressText)
-
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500, chunk_overlap=100, length_function=len
     )
 
-    texts = splitter.split_text(text)
-    progressBar.progress(1.0)
-    progressBar.empty()
-    return texts
+    text = preprocess_text(extract_text(file))
+    return splitter.split_text(text)
 
 
 st.set_page_config(page_title="🤗💬 PDF Chat App",
