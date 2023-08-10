@@ -129,7 +129,8 @@ pdf = st.file_uploader("Upload a pdf file", type="pdf")
 if not pdf:
     st.warning("Please upload a pdf file.", icon="⚠️")
 else:
-    if not st.session_state.get('vector_store'):
+    if pdf.name[:-4] != st.session_state.get("file_name", ""):
+        st.session_state["file_name"] = pdf.name[:-4]
         texts = getTexts(pdf)
         gen_embedddings(texts)  # generate embeddings for texts
 
