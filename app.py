@@ -4,7 +4,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain import PromptTemplate, LLMChain
 from langchain.vectorstores import FAISS
 from langchain import HuggingFaceHub
-from PyPDF2 import PdfReader
 from pdfminer.high_level import extract_text
 import spacy
 import re
