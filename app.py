@@ -85,6 +85,14 @@ st.set_page_config(page_title="🤗💬 PDF Chat App",
                    initial_sidebar_state="expanded")
 
 
+def clear_chat_history():
+    st.session_state["messages"] = [
+        {
+            "role": "assistant",
+            "content": "How may I assist you today?"
+        }
+    ]
+
 with st.sidebar:
     st.title("🤗 Pdf Chat App")
     st.markdown(
@@ -107,13 +115,6 @@ with st.sidebar:
         else:
             st.success("API token saved!", icon="✅")
 
-    def clear_chat_history():
-        st.session_state["messages"] = [
-            {
-                "role": "assistant",
-                "content": "How may I assist you today?"
-            }
-        ]
     st.button('Clear Chat History', on_click=clear_chat_history)
 
     st.markdown(
@@ -132,6 +133,7 @@ else:
         st.session_state["file_name"] = pdf.name[:-4]
         texts = getTexts(pdf)
         gen_embedddings(texts)  # generate embeddings for texts
+        clear_chat_history()
 
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
