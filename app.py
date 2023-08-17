@@ -30,17 +30,9 @@ def preprocess_text(text):
 
 
 def gen_embedddings(texts):
-    progress_text = "Indexing documents..."
-    progress_bar = st.progress(0, progress_text)
-    embeddings = HuggingFaceEmbeddings()
-    for i in range(len(texts)):
-        FAISS.from_texts(texts[i:i+1], embeddings)
-        progress_value = (i+1)/len(texts)
-        if progress_value > 1.0:
-            progress_value = 1.0
-        progress_bar.progress(progress_value, progress_text)
-    progress_bar.empty()
-    st.session_state['vector_store'] = FAISS.from_texts(texts, embeddings)
+    with st.spinner("Processing..."):
+        embeddings = HuggingFaceEmbeddings()
+        st.session_state['vector_store'] = FAISS.from_texts(texts, embeddings)
 
 
 def gen_response(name, question):
