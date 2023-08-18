@@ -14,6 +14,7 @@ git clone https://github.com/sudan94/chat-pdf-hugginface.git
 2. Install the required packages:
 ```
 pip install streamlit langchain huggingface-hub pdfminer.six spacy sentence-transformers faiss-cpu
+spacy download en_core_web_sm
 ```
 3. Add the huggingface token:
     1. rename .streamlit/secrets.local.toml to .streamlit/secrets.toml
